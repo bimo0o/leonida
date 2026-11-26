@@ -478,6 +478,9 @@ def collect_ctest(col, args):
         if source_id == "ctest_junit" and not is_ctest:
             col.source(source_id, path, "invalid", note="expected a CTest --output-junit report")
             continue
+        if root.tag not in ("testsuite", "testsuites"):
+            col.source(source_id, path, "invalid", note="expected a JUnit report with a testsuite or testsuites root")
+            continue
         rows = parse_junit(root)
         sets.append((label, path, rows, is_ctest))
         col.source(source_id, path, "ok", len(rows))

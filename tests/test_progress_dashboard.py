@@ -63,6 +63,22 @@ class Contract(unittest.TestCase):
 
 
 class Tests(unittest.TestCase):
+    def test_junit_rejects_unrelated_xml_but_accepts_empty_reports(self):
+        with tempfile.TemporaryDirectory() as root:
+            paths = []
+            for tag in ("coverage", "testsuite", "testsuites"):
+                path = os.path.join(root, tag + ".xml")
+                with open(path, "w", encoding="utf-8", newline="\n") as f:
+                    f.write(f"<{tag}/>\n")
+                paths.append(path)
+            col = pd.Collector()
+            with mock.patch.object(pd, "ROOT", root), mock.patch.object(pd, "last_commit_time", return_value=None):
+                pd.collect_ctest(col, SimpleNamespace(junit=paths))
+        sources = [s for s in col.sources if s["id"] == "junit"]
+        self.assertEqual([(s["status"], s.get("records")) for s in sources],
+                         [("invalid", None), ("ok", 0), ("ok", 0)])
+        self.assertIn("expected a JUnit report", sources[0]["note"])
+
     def test_junit_honors_each_reports_encoding(self):
         xml = '<?xml version="1.0" encoding="{}"?><testsuite><testcase name="{}"><failure/></testcase></testsuite>'
         with tempfile.TemporaryDirectory() as root:
